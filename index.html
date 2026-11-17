@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- iOS PWA & Home Screen Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="FreeTime">
+    <link rel="apple-touch-icon" href="https://placehold.co/180x180/0f172a/ffffff?text=FT">
+    <title>Free Time Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Custom scrollbar for clean look */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(241, 245, 249, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(203, 213, 225, 0.8);
+            border-radius: 3px;
+        }
+        .minimal-card {
+            background: #ffffff;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.03);
+        }
+        /* SVG Curved Arc styling */
+        .time-curve-svg {
+            overflow: visible;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen pb-16 selection:bg-slate-900 selection:text-white">
+
+    <!-- Top Navigation Header -->
+    <header class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 py-3.5">
+        <div class="max-w-xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center shadow-sm">
+                    <i class="fa-solid fa-hourglass-half text-white text-sm"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base tracking-tight leading-none text-slate-900">FreeTime</h1>
+                    <span class="text-xs text-slate-500 font-medium">Personal Time Governor</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button onclick="openPresetsModal()" class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition shadow-xs flex items-center gap-1.5 active:scale-95">
+                    <i class="fa-solid fa-bookmark text-[10px]"></i> Presets
+                </button>
+                <button onclick="openReviewModal()" class="px-3 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-slate-800 transition shadow-xs flex items-center gap-1.5 active:scale-95">
+                    <i class="fa-solid fa-flag-checkered text-[10px]"></i> Review
+                </button>
+                <button onclick="openSettingsModal()" class="px-3 py-1.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition shadow-xs flex items-center gap-1.5 active:scale-95">
+                    <i class="fa-solid fa-gear text-[10px]"></i> Menu
+                </button>
+                <button onclick="resetAllData()" class="w-9 h-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-rose-500 hover:bg-slate-100 transition active:scale-95 shadow-xs" title="Reset Session">
+                    <i class="fa-solid fa-rotate-right text-sm"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-xl mx-auto px-4 pt-5 space-y-6">
+
+        <!-- Time Bank Dashboard Card with Curved Visualizer -->
+        <section class="minimal-card rounded-3xl p-5 relative overflow-hidden">
+            <div class="flex justify-between items-start mb-2">
+                <div>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">Active Session</span>
+                    <h2 id="session-title-display" class="text-xl font-bold mt-2 text-slate-900">Afternoon Free Window</h2>
+                </div>
+                <button onclick="openSettingsModal()" class="text-xs font-medium text-slate-500 hover:text-slate-900 transition flex items-center gap-1 bg-slate-50 px-2.5 py-1 rounded-lg border border-slate-200">
+                    <i class="fa-solid fa-pencil text-[10px]"></i> Edit Budget
+                </button>
+            </div>
+
+            <!-- Curved Upwards Timeline Visualization -->
+            <div class="my-6 relative py-2 px-2">
+                <div class="flex justify-between items-center mb-1 px-1">
+                    <span class="text-xs font-medium text-slate-400">Timeline Flow</span>
+                    <span id="progress-percent" class="text-xs font-bold text-slate-700">0% used</span>
+                </div>
+                
+                <!-- SVG Curved Upward Arc -->
+                <div class="w-full relative h-20 flex items-center justify-center">
+                    <svg class="w-full h-16 time-curve-svg" viewBox="0 0 400 60" preserveAspectRatio="none">
+                        <!-- Background Upward Curve path (Arch shape: M 10 50 Q 200 10 390 50) -->
+                        <path d="M 10 50 Q 200 10 390 50" fill="none" stroke="#f1f5f9" stroke-width="14" stroke-linecap="round" />
+                        <!-- Dynamic overlay segments path rendered via JS -->
+                        <g id="svg-curve-segments"></g>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Main Metrics Grid -->
+            <div class="grid grid-cols-3 gap-2.5 mb-4">
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 text-center">
+                    <span class="text-[11px] font-medium text-slate-500 block mb-0.5">Total Pool</span>
+                    <span id="stat-total" class="text-lg font-bold text-slate-800">4.0h</span>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 text-center">
+                    <span class="text-[11px] font-medium text-slate-500 block mb-0.5">Allocated</span>
+                    <span id="stat-allocated" class="text-lg font-bold text-slate-800">0.0h</span>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3 border border-slate-200 text-center">
+                    <span class="text-[11px] font-medium text-slate-500 block mb-0.5">Remaining</span>
+                    <span id="stat-remaining" class="text-lg font-bold text-emerald-600">4.0h</span>
+                </div>
+            </div>
+
+            <!-- Distraction Alert Banner / Stat -->
+            <div id="penalty-banner" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-3 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-8 h-8 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                        <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-rose-900">Distractions Logged</h4>
+                        <p class="text-[11px] text-rose-700"><span id="stat-penalty-time">0m</span> lost to social media/distractions</p>
+                    </div>
+                </div>
+                <span id="overrun-badge" class="hidden text-[10px] font-bold bg-rose-500 text-white px-2 py-0.5 rounded-full">OVER BUDGET</span>
+            </div>
+        </section>
+
+        <!-- Quick Socials / Distraction Penalty Logger -->
+        <section class="minimal-card rounded-3xl p-5">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                        <i class="fa-solid fa-bolt-lightning text-xs"></i>
+                    </div>
+                    <h3 class="font-bold text-sm text-slate-900">Quick Distraction Penalty</h3>
+                </div>
+                <span class="text-[11px] text-slate-400">Instantly deducts time</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">Caught yourself scrolling? Tap below to instantly subtract time from your free window.</p>
+            <div class="grid grid-cols-4 gap-2">
+                <button onclick="addPenalty(5)" class="bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 py-2.5 rounded-xl text-xs font-semibold transition active:scale-95 flex flex-col items-center justify-center">
+                    <span class="text-sm font-bold">+5m</span>
+                    <span class="text-[9px] text-slate-400 mt-0.5">Scroll</span>
+                </button>
+                <button onclick="addPenalty(15)" class="bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 py-2.5 rounded-xl text-xs font-semibold transition active:scale-95 flex flex-col items-center justify-center">
+                    <span class="text-sm font-bold">+15m</span>
+                    <span class="text-[9px] text-slate-400 mt-0.5">Reels/TikTok</span>
+                </button>
+                <button onclick="addPenalty(30)" class="bg-slate-50 hover:bg-rose-50 border border-slate-200 hover:border-rose-300 text-slate-700 py-2.5 rounded-xl text-xs font-semibold transition active:scale-95 flex flex-col items-center justify-center">
+                    <span class="text-sm font-bold">+30m</span>
+                    <span class="text-[9px] text-slate-400 mt-0.5">YouTube</span>
+                </button>
+                <button onclick="openCustomPenaltyModal()" class="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-semibold transition active:scale-95 flex flex-col items-center justify-center">
+                    <span class="text-sm font-bold"><i class="fa-solid fa-plus"></i></span>
+                    <span class="text-[9px] text-slate-400 mt-0.5">Custom</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Activities Section -->
+        <section class="space-y-3">
+            <div class="flex items-center justify-between px-1">
+                <div class="flex items-center space-x-2">
+                    <div class="w-7 h-7 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                        <i class="fa-solid fa-list-check text-xs"></i>
+                    </div>
+                    <h3 class="font-bold text-sm text-slate-900">Planned Activities</h3>
+                </div>
+                <button onclick="openActivityModal()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition shadow-sm flex items-center gap-1.5 active:scale-95">
+                    <i class="fa-solid fa-plus text-[10px]"></i> Add Activity
+                </button>
+            </div>
+
+            <!-- Activities List -->
+            <div id="activities-list" class="space-y-2.5">
+                <!-- Populated by JS -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-activities" class="hidden text-center py-8 bg-white border border-dashed border-slate-200 rounded-3xl">
+                <div class="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center mx-auto text-slate-400 mb-3">
+                    <i class="fa-solid fa-mug-hot text-base"></i>
+                </div>
+                <h4 class="text-xs font-bold text-slate-700">No activities added yet</h4>
+                <p class="text-[11px] text-slate-400 mt-0.5 max-w-[200px] mx-auto">Break down your time into studying, resting, chores, or hobbies.</p>
+            </div>
+        </section>
+
+        <!-- AI Time Coach / Insight Card -->
+        <section class="minimal-card rounded-3xl p-4 bg-gradient-to-r from-white to-slate-50">
+            <div class="flex items-start space-x-3">
+                <div class="w-8 h-8 rounded-xl bg-slate-100 text-slate-700 flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                </div>
+                <div>
+                    <h4 class="text-xs font-bold text-slate-900">Time Coach Insight</h4>
+                    <p id="coach-insight-text" class="text-xs text-slate-600 mt-1 leading-relaxed">You have pristine time left! Consider protecting your focus blocks and keeping socials for after your key tasks are done.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Guide Section: How to use when coming home -->
+        <section class="minimal-card rounded-3xl p-5 border border-slate-200">
+            <div class="flex items-center space-x-2.5 mb-3">
+                <div class="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-compass"></i>
+                </div>
+                <h3 class="font-bold text-sm text-slate-900">Coming Home Workflow Guide</h3>
+            </div>
+            <div class="space-y-3 text-xs text-slate-600 leading-relaxed">
+                <div class="flex items-start space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-bold flex items-center justify-center shrink-0 text-[10px] mt-0.5">1</span>
+                    <div>
+                        <strong class="text-slate-900">Check Your Window:</strong> Tap the <i class="fa-solid fa-gear text-slate-500"></i> Menu icon at the top right to set how many hours you have until your next commitment.
+                    </div>
+                </div>
+                <div class="flex items-start space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-bold flex items-center justify-center shrink-0 text-[10px] mt-0.5">2</span>
+                    <div>
+                        <strong class="text-slate-900">Catch the Social Scrolls Early:</strong> If you grab your phone right when you walk in and end up scrolling for 15 minutes, immediately hit <span class="bg-rose-50 text-rose-700 font-semibold px-1.5 py-0.5 rounded border border-rose-200">+15m Reels/TikTok</span>. The upward curve will instantly visualize that chunk of time eaten up in red.
+                    </div>
+                </div>
+                <div class="flex items-start space-x-2.5">
+                    <span class="w-5 h-5 rounded-full bg-slate-100 text-slate-800 font-bold flex items-center justify-center shrink-0 text-[10px] mt-0.5">3</span>
+                    <div>
+                        <strong class="text-slate-900">Lock in Intentional Blocks:</strong> Add your study sessions, workouts, or relaxation blocks. Each gets its own unique color from the expanded color wheel so your upward timeline arc turns into a clean, segmented rainbow of your day.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Note cleaned up -->
+    <footer class="max-w-xl mx-auto px-4 pt-6 pb-8 text-center">
+        <p class="text-[11px] text-slate-400">
+            FreeTime • Tailored Personal Time Governor
+        </p>
+    </footer>
+
+    <!-- ADD/EDIT ACTIVITY MODAL -->
+    <div id="activity-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6 shadow-2xl transform transition-transform duration-300 translate-y-full sm:translate-y-0" id="activity-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="modal-title" class="font-bold text-base text-slate-900">Add Activity</h3>
+                <button onclick="closeActivityModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <form id="activity-form" onsubmit="handleActivitySubmit(event)" class="space-y-4">
+                <input type="hidden" id="activity-id">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Activity Name</label>
+                    <input type="text" id="activity-name" required placeholder="e.g. Study Math, Gym, Read Book" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-slate-900 transition">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Duration (Minutes)</label>
+                        <input type="number" id="activity-duration" required min="5" step="5" placeholder="60" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-slate-900 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-500 mb-1">Activity Color Palette</label>
+                        <!-- Expanded Color Wheel / Palette Options -->
+                        <div class="grid grid-cols-6 gap-1.5 pt-1.5" id="color-picker-container">
+                            <button type="button" onclick="selectColor('indigo', this)" class="w-7 h-7 rounded-lg bg-indigo-500 ring-2 ring-offset-2 ring-indigo-500 transition shadow-xs" title="Indigo"></button>
+                            <button type="button" onclick="selectColor('blue', this)" class="w-7 h-7 rounded-lg bg-blue-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Blue"></button>
+                            <button type="button" onclick="selectColor('emerald', this)" class="w-7 h-7 rounded-lg bg-emerald-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Emerald"></button>
+                            <button type="button" onclick="selectColor('teal', this)" class="w-7 h-7 rounded-lg bg-teal-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Teal"></button>
+                            <button type="button" onclick="selectColor('amber', this)" class="w-7 h-7 rounded-lg bg-amber-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Amber"></button>
+                            <button type="button" onclick="selectColor('orange', this)" class="w-7 h-7 rounded-lg bg-orange-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Orange"></button>
+                            <button type="button" onclick="selectColor('violet', this)" class="w-7 h-7 rounded-lg bg-violet-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Violet"></button>
+                            <button type="button" onclick="selectColor('purple', this)" class="w-7 h-7 rounded-lg bg-purple-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Purple"></button>
+                            <button type="button" onclick="selectColor('pink', this)" class="w-7 h-7 rounded-lg bg-pink-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Pink"></button>
+                            <button type="button" onclick="selectColor('cyan', this)" class="w-7 h-7 rounded-lg bg-cyan-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Cyan"></button>
+                            <button type="button" onclick="selectColor('lime', this)" class="w-7 h-7 rounded-lg bg-lime-500 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Lime"></button>
+                            <button type="button" onclick="selectColor('slate', this)" class="w-7 h-7 rounded-lg bg-slate-700 ring-2 ring-offset-2 ring-transparent transition shadow-xs" title="Slate"></button>
+                        </div>
+                        <input type="hidden" id="activity-color" value="indigo">
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl text-sm transition shadow-sm active:scale-95">
+                        Save Activity
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SETTINGS / BUDGET MODAL -->
+    <div id="settings-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6 shadow-2xl" id="settings-modal-content">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-base text-slate-900">Session Settings & Menu</h3>
+                <button onclick="closeSettingsModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleSettingsSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Session Title</label>
+                    <input type="text" id="setting-title" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-slate-900 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Total Free Time (Hours)</label>
+                    <input type="number" id="setting-total-hours" required min="0.5" max="24" step="0.5" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-slate-900 transition">
+                </div>
+                <div class="pt-2">
+                    <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl text-sm transition shadow-sm active:scale-95">
+                        Update Budget
+                    </button>
+                </div>
+            </form>
+
+            <div class="mt-6 pt-5 border-t border-slate-100">
+                <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">📱 iOS Home Screen Guide</h4>
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3 text-xs text-slate-600 leading-relaxed space-y-2">
+                    <p>Apple restricts web pages from adding icons automatically. To install on your iPhone or iPad:</p>
+                    <ol class="list-decimal pl-4 space-y-1 font-medium text-slate-700">
+                        <li>Open this exact page directly in <strong>Safari</strong> (not inside an in-app browser).</li>
+                        <li>Tap the <strong>Share</strong> button <i class="fa-solid fa-arrow-up-from-bracket mx-0.5"></i> at the bottom/top of Safari.</li>
+                        <li>Scroll down the share sheet and tap <strong>"Add to Home Screen"</strong>.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRESETS MODAL -->
+    <div id="presets-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity duration-300">
+        <div class="bg-white border border-slate-200 rounded-t-3xl sm:rounded-3xl w-full max-w-md p-6 shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-base text-slate-900">Time Window Presets</h3>
+                <button onclick="closePresetsModal()" class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:text-slate-900 flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
+            
+            <p class="text-xs text-slate-500 mb-4">Quickly switch between your common schedule windows or save your current setup as a preset.</p>
+
+            <!-- Save Current as Preset Form -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 mb-4 space-y-3">
+                <h4 class="text-xs font-bold text-slate-800">Save Current Setup as Preset</h4>
+                <div class="flex space-x-2">
+                    <input type="text" id="new-preset-name" placeholder="e.g. Quick Evening Window" class="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-slate-900">
+                    <button onclick="saveCurrentAsPreset()" class="bg-slate-900 hover:bg-slate-800 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition active:scale-95 shrink-0">
+                        Save Preset
+                    </button>
+                </div>
+            </div>
+
+            <!-- Presets List -->
+            <div class="space-y-2.5 max-h-64 overflow-y-auto pr-1" id="presets-list-container">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- END-OF-SESSION REVIEW / CELEBRATION MODAL -->
+    <div id="review-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-6 shadow-2xl text-center space-y-4">
+            <div class="w-14 h-14 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto text-xl shadow-sm">
+                <i class="fa-solid fa-award"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-lg text-slate-900">Session Review & Wrap-Up</h3>
+                <p class="text-xs text-slate-500 mt-0.5">Here is how you managed your free time window today.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 py-2">
+                <div class="bg-slate-50 rounded-2xl p-3.5 border border-slate-200">
+                    <span class="text-[11px] font-medium text-slate-500 block">Activities Completed</span>
+                    <span id="review-completed-count" class="text-xl font-bold text-slate-900 mt-1 block">0 / 0</span>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3.5 border border-slate-200">
+                    <span class="text-[11px] font-medium text-slate-500 block">Distraction Time</span>
+                    <span id="review-penalty-time" class="text-xl font-bold text-rose-600 mt-1 block">0m</span>
+                </div>
+            </div>
+
+            <div id="review-message-box" class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs text-slate-700 leading-relaxed text-left">
+                <!-- Dynamic feedback -->
+            </div>
+
+            <div class="pt-2">
+                <button onclick="closeReviewModal()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3 rounded-xl text-sm transition shadow-sm active:scale-95">
+                    Back to Tracker
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CUSTOM PENALTY MODAL -->
+    <div id="custom-penalty-modal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden items-center justify-center p-4">
+        <div class="bg-white border border-slate-200 rounded-3xl w-full max-w-xs p-5 shadow-2xl">
+            <h3 class="font-bold text-sm text-slate-900 mb-3">Log Custom Distraction</h3>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs font-medium text-slate-500 mb-1">Minutes Wasted</label>
+                    <input type="number" id="custom-penalty-mins" min="1" max="300" value="10" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-rose-500 transition">
+                </div>
+                <div class="flex space-x-2 pt-1">
+                    <button onclick="closeCustomPenaltyModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-semibold transition">Cancel</button>
+                    <button onclick="submitCustomPenalty()" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white py-2.5 rounded-xl text-xs font-semibold transition shadow-sm">Subtract</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-medium transition-all duration-300 opacity-0 translate-y-4 pointer-events-none flex items-center space-x-2">
+        <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">Action completed</span>
+    </div>
+
+    <!-- App JavaScript Logic -->
+    <script>
+        // State Management
+        let appData = {
+            sessionTitle: "Afternoon Free Window",
+            totalMinutes: 240, // 4 hours default
+            penaltyMinutes: 0,
+            activities: [
+                { id: "1", name: "Deep Study / Coding", duration: 90, color: "indigo", completed: false },
+                { id: "2", name: "Walk & Coffee Break", duration: 45, color: "emerald", completed: false },
+                { id: "3", name: "Quick Room Cleanup", duration: 30, color: "amber", completed: false }
+            ],
+            presets: [
+                { id: "p1", name: "Short Evening Window (2h)", totalMinutes: 120, activities: [
+                    { id: "p1_1", name: "Quick Workout", duration: 45, color: "blue", completed: false },
+                    { id: "p1_2", name: "Read & Relax", duration: 60, color: "emerald", completed: false }
+                ]},
+                { id: "p2", name: "Long Weekend Afternoon (5h)", totalMinutes: 300, activities: [
+                    { id: "p2_1", name: "Deep Project Work", duration: 120, color: "indigo", completed: false },
+                    { id: "p2_2", name: "Outdoor Walk", duration: 60, color: "teal", completed: false },
+                    { id: "p2_3", name: "Chores & Prep", duration: 60, color: "amber", completed: false }
+                ]}
+            ]
+        };
+
+        const colorMap = {
+            indigo: "#6366f1",
+            blue: "#3b82f6",
+            emerald: "#10b981",
+            teal: "#14b8a6",
+            amber: "#f59e0b",
+            orange: "#f97316",
+            violet: "#8b5cf6",
+            purple: "#a855f7",
+            pink: "#ec4899",
+            cyan: "#06b6d4",
+            lime: "#84cc16",
+            slate: "#475569"
+        };
+
+        function initApp() {
+            loadFromLocalStorage();
+            renderApp();
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('freetime_tracker_data_v2');
+            if (saved) {
+                try {
+                    appData = JSON.parse(saved);
+                } catch(e) {
+                    console.error("Error loading saved data", e);
+                }
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('freetime_tracker_data_v2', JSON.stringify(appData));
+        }
+
+        function showToast(msg, icon = 'fa-circle-check', iconColor = 'text-emerald-400') {
+            const toast = document.getElementById('toast');
+            const msgEl = document.getElementById('toast-msg');
+            const iconEl = document.getElementById('toast-icon');
+            
+            msgEl.textContent = msg;
+            iconEl.className = `fa-solid ${icon} ${iconColor}`;
+            
+            toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+            toast.classList.add('opacity-100', 'translate-y-0');
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-100', 'translate-y-0');
+                toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+            }, 2500);
+        }
+
+        function renderApp() {
+            // Update Title
+            document.getElementById('session-title-display').textContent = appData.sessionTitle;
+
+            // Calculate Metrics
+            const totalMins = appData.totalMinutes;
+            const allocatedMins = appData.activities.reduce((acc, curr) => acc + curr.duration, 0);
+            const remainingMins = totalMins - allocatedMins - appData.penaltyMinutes;
+            const percentUsed = Math.min(100, Math.round(((allocatedMins + appData.penaltyMinutes) / totalMins) * 100));
+
+            document.getElementById('stat-total').textContent = (totalMins / 60).toFixed(1) + 'h';
+            document.getElementById('stat-allocated').textContent = (allocatedMins / 60).toFixed(1) + 'h';
+            
+            const remEl = document.getElementById('stat-remaining');
+            remEl.textContent = (remainingMins / 60).toFixed(1) + 'h';
+            if (remainingMins < 0) {
+                remEl.className = "text-lg font-bold text-rose-600";
+            } else {
+                remEl.className = "text-lg font-bold text-emerald-600";
+            }
+
+            document.getElementById('progress-percent').textContent = percentUsed + '% used';
+
+            // Penalty Banner
+            const penaltyBanner = document.getElementById('penalty-banner');
+            const overrunBadge = document.getElementById('overrun-badge');
+            if (appData.penaltyMinutes > 0) {
+                penaltyBanner.classList.remove('hidden');
+                penaltyBanner.classList.add('flex');
+                document.getElementById('stat-penalty-time').textContent = appData.penaltyMinutes + 'm';
+                if (remainingMins < 0) {
+                    overrunBadge.classList.remove('hidden');
+                } else {
+                    overrunBadge.classList.add('hidden');
+                }
+            } else {
+                penaltyBanner.classList.add('hidden');
+                penaltyBanner.classList.remove('flex');
+            }
+
+            // Render SVG Curved Segments (Upward Arch: M 10 50 Q 200 10 390 50)
+            renderSvgCurve(allocatedMins, totalMins);
+
+            // Render Activities List
+            renderActivitiesList();
+
+            // Render AI Coach Insight
+            updateCoachInsight(remainingMins, allocatedMins);
+        }
+
+        function renderSvgCurve(allocatedMins, totalMins) {
+            const svgGroup = document.getElementById('svg-curve-segments');
+            svgGroup.innerHTML = '';
+
+            if (totalMins <= 0 || appData.activities.length === 0) return;
+
+            let currentOffset = 0;
+            const totalSpan = 380; // Arc path span length approx
+
+            appData.activities.forEach((act, idx) => {
+                const proportion = act.duration / totalMins;
+                const strokeLen = Math.max(8, proportion * totalSpan);
+                const color = colorMap[act.color] || '#6366f1';
+
+                // We simulate path dasharray segments along the upward arc curve
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                line.setAttribute('d', 'M 10 50 Q 200 10 390 50');
+                line.setAttribute('fill', 'none');
+                line.setAttribute('stroke', color);
+                line.setAttribute('stroke-width', '14');
+                line.setAttribute('stroke-linecap', 'round');
+                line.style.strokeDasharray = `${strokeLen} 1000`;
+                line.style.strokeDashoffset = `-${currentOffset}`;
+                line.style.transition = 'all 0.4s ease';
+
+                svgGroup.appendChild(line);
+                currentOffset += strokeLen + 2;
+            });
+
+            // If there's penalty time, append a red distraction segment
+            if (appData.penaltyMinutes > 0) {
+                const penaltyProp = appData.penaltyMinutes / totalMins;
+                const penaltyLen = Math.max(6, penaltyProp * totalSpan);
+                const penaltyLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                penaltyLine.setAttribute('d', 'M 10 50 Q 200 10 390 50');
+                penaltyLine.setAttribute('fill', 'none');
+                penaltyLine.setAttribute('stroke', '#e11d48');
+                penaltyLine.setAttribute('stroke-width', '14');
+                penaltyLine.setAttribute('stroke-linecap', 'round');
+                penaltyLine.style.strokeDasharray = `${penaltyLen} 1000`;
+                penaltyLine.style.strokeDashoffset = `-${currentOffset}`;
+                svgGroup.appendChild(penaltyLine);
+            }
+        }
+
+        function renderActivitiesList() {
+            const listEl = document.getElementById('activities-list');
+            const emptyEl = document.getElementById('empty-activities');
+
+            if (appData.activities.length === 0) {
+                listEl.innerHTML = '';
+                emptyEl.classList.remove('hidden');
+                return;
+            }
+
+            emptyEl.classList.add('hidden');
+            let html = '';
+
+            appData.activities.forEach(act => {
+                const colorHex = colorMap[act.color] || '#6366f1';
+                const hoursText = act.duration >= 60 ? `${(act.duration/60).toFixed(1)}h` : `${act.duration}m`;
+                const isCompletedClass = act.completed ? 'opacity-60 bg-slate-50 line-through' : 'bg-white';
+                
+                html += `
+                    <div class="${isCompletedClass} border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between transition hover:border-slate-300 shadow-xs">
+                        <div class="flex items-center space-x-3">
+                            <button onclick="toggleActivityComplete('${act.id}')" class="w-6 h-6 rounded-lg border-2 ${act.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white'} flex items-center justify-center transition">
+                                ${act.completed ? '<i class="fa-solid fa-check text-xs"></i>' : ''}
+                            </button>
+                            <div class="w-3.5 h-3.5 rounded-full shrink-0" style="background-color: ${colorHex};"></div>
+                            <div>
+                                <h4 class="text-xs font-bold text-slate-900">${escapeHtml(act.name)}</h4>
+                                <span class="text-[11px] text-slate-500 font-medium">${hoursText}</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-1">
+                            <button onclick="openEditActivityModal('${act.id}')" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-400 hover:text-slate-700 flex items-center justify-center transition">
+                                <i class="fa-solid fa-pencil text-[11px]"></i>
+                            </button>
+                            <button onclick="deleteActivity('${act.id}')" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition">
+                                <i class="fa-solid fa-trash text-[11px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            listEl.innerHTML = html;
+        }
+
+        function updateCoachInsight(remainingMins, allocatedMins) {
+            const coachEl = document.getElementById('coach-insight-text');
+            if (appData.penaltyMinutes > 30) {
+                coachEl.textContent = `Heads up! You've logged ${appData.penaltyMinutes}m in distractions. Try putting your phone in another room for your next focus block to protect your remaining time.`;
+            } else if (remainingMins < 0) {
+                coachEl.textContent = `You are currently over budget by ${Math.abs(remainingMins)}m! Consider shortening upcoming activities or wrapping up early to hit your next event on time.`;
+            } else if (allocatedMins === 0) {
+                coachEl.textContent = `Welcome home! Tap 'Add Activity' to start breaking down your free time window into productive blocks.`;
+            } else {
+                coachEl.textContent = `Great pacing! Your planned activities fit nicely into your window. Keep focused and enjoy your downtime responsibly.`;
+            }
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Penalty Actions
+        function addPenalty(mins) {
+            appData.penaltyMinutes += mins;
+            saveToLocalStorage();
+            renderApp();
+            showToast(`Added +${mins}m distraction penalty`, 'fa-bolt', 'text-rose-400');
+        }
+
+        function openCustomPenaltyModal() {
+            const modal = document.getElementById('custom-penalty-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeCustomPenaltyModal() {
+            const modal = document.getElementById('custom-penalty-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function submitCustomPenalty() {
+            const minsInput = document.getElementById('custom-penalty-mins');
+            const mins = parseInt(minsInput.value) || 0;
+            if (mins > 0) {
+                addPenalty(mins);
+            }
+            closeCustomPenaltyModal();
+        }
+
+        // Activity Modal Operations
+        function openActivityModal() {
+            document.getElementById('modal-title').textContent = "Add Activity";
+            document.getElementById('activity-id').value = "";
+            document.getElementById('activity-name').value = "";
+            document.getElementById('activity-duration').value = "45";
+            selectColor('indigo', document.querySelector('#color-picker-container button'));
+            
+            const modal = document.getElementById('activity-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function openEditActivityModal(id) {
+            const act = appData.activities.find(a => a.id === id);
+            if (!act) return;
+
+            document.getElementById('modal-title').textContent = "Edit Activity";
+            document.getElementById('activity-id').value = act.id;
+            document.getElementById('activity-name').value = act.name;
+            document.getElementById('activity-duration').value = act.duration;
+            
+            // Find and highlight color button
+            const colorBtn = document.querySelector(`#color-picker-container button[onclick*="'${act.color}'"]`);
+            if (colorBtn) selectColor(act.color, colorBtn);
+
+            const modal = document.getElementById('activity-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeActivityModal() {
+            const modal = document.getElementById('activity-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function selectColor(colorName, btnElement) {
+            document.getElementById('activity-color').value = colorName;
+            const buttons = document.querySelectorAll('#color-picker-container button');
+            buttons.forEach(b => {
+                b.classList.remove('ring-2', 'ring-offset-2', 'ring-indigo-500', 'ring-slate-900');
+                b.classList.add('ring-2', 'ring-offset-2', 'ring-transparent');
+            });
+            btnElement.classList.remove('ring-transparent');
+            btnElement.classList.add('ring-2', 'ring-offset-2', 'ring-slate-900');
+        }
+
+        function handleActivitySubmit(event) {
+            event.preventDefault();
+            const id = document.getElementById('activity-id').value;
+            const name = document.getElementById('activity-name').value.trim();
+            const duration = parseInt(document.getElementById('activity-duration').value);
+            const color = document.getElementById('activity-color').value;
+
+            if (!name || isNaN(duration)) return;
+
+            if (id) {
+                // Edit
+                const act = appData.activities.find(a => a.id === id);
+                if (act) {
+                    act.name = name;
+                    act.duration = duration;
+                    act.color = color;
+                }
+                showToast('Activity updated successfully', 'fa-circle-check', 'text-emerald-400');
+            } else {
+                // Add new
+                const newAct = {
+                    id: Date.now().toString(),
+                    name,
+                    duration,
+                    color,
+                    completed: false
+                };
+                appData.activities.push(newAct);
+                showToast('Activity added successfully', 'fa-circle-check', 'text-emerald-400');
+            }
+
+            saveToLocalStorage();
+            renderApp();
+            closeActivityModal();
+        }
+
+        function toggleActivityComplete(id) {
+            const act = appData.activities.find(a => a.id === id);
+            if (act) {
+                act.completed = !act.completed;
+                saveToLocalStorage();
+                renderApp();
+            }
+        }
+
+        function deleteActivity(id) {
+            appData.activities = appData.activities.filter(a => a.id !== id);
+            saveToLocalStorage();
+            renderApp();
+            showToast('Activity removed', 'fa-trash', 'text-slate-400');
+        }
+
+        // Settings Modal
+        function openSettingsModal() {
+            document.getElementById('setting-title').value = appData.sessionTitle;
+            document.getElementById('setting-total-hours').value = (appData.totalMinutes / 60);
+
+            const modal = document.getElementById('settings-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeSettingsModal() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function handleSettingsSubmit(event) {
+            event.preventDefault();
+            const title = document.getElementById('setting-title').value.trim();
+            const hours = parseFloat(document.getElementById('setting-total-hours').value);
+
+            if (title && !isNaN(hours)) {
+                appData.sessionTitle = title;
+                appData.totalMinutes = Math.round(hours * 60);
+                saveToLocalStorage();
+                renderApp();
+                closeSettingsModal();
+                showToast('Budget updated successfully', 'fa-sliders', 'text-emerald-400');
+            }
+        }
+
+        // Presets Management
+        function renderPresetsList() {
+            const container = document.getElementById('presets-list-container');
+            if (!appData.presets || appData.presets.length === 0) {
+                container.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">No saved presets yet.</p>`;
+                return;
+            }
+
+            let html = '';
+            appData.presets.forEach(p => {
+                const totalH = (p.totalMinutes / 60).toFixed(1);
+                html += `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-3 flex items-center justify-between transition hover:border-slate-300">
+                        <div>
+                            <h5 class="text-xs font-bold text-slate-900">${escapeHtml(p.name)}</h5>
+                            <span class="text-[11px] text-slate-500">${totalH}h total • ${p.activities.length} activities</span>
+                        </div>
+                        <div class="flex items-center space-x-1.5">
+                            <button onclick="loadPreset('${p.id}')" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs font-semibold transition active:scale-95">
+                                Load
+                            </button>
+                            <button onclick="deletePreset('${p.id}')" class="w-8 h-8 rounded-xl bg-slate-50 hover:bg-rose-50 text-slate-400 hover:text-rose-600 flex items-center justify-center transition">
+                                <i class="fa-solid fa-trash text-[11px]"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function openPresetsModal() {
+            renderPresetsList();
+            const modal = document.getElementById('presets-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closePresetsModal() {
+            const modal = document.getElementById('presets-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function saveCurrentAsPreset() {
+            const nameInput = document.getElementById('new-preset-name');
+            const name = nameInput.value.trim();
+            if (!name) {
+                showToast('Please enter a preset name', 'fa-triangle-exclamation', 'text-amber-500');
+                return;
+            }
+
+            const newPreset = {
+                id: Date.now().toString(),
+                name,
+                totalMinutes: appData.totalMinutes,
+                activities: JSON.parse(JSON.stringify(appData.activities))
+            };
+
+            appData.presets.push(newPreset);
+            saveToLocalStorage();
+            nameInput.value = "";
+            renderPresetsList();
+            showToast('Preset saved successfully!', 'fa-circle-check', 'text-emerald-500');
+        }
+
+        function loadPreset(id) {
+            const preset = appData.presets.find(p => p.id === id);
+            if (preset) {
+                appData.sessionTitle = preset.name;
+                appData.totalMinutes = preset.totalMinutes;
+                appData.penaltyMinutes = 0;
+                appData.activities = JSON.parse(JSON.stringify(preset.activities));
+                appData.activities.forEach(a => a.completed = false);
+                saveToLocalStorage();
+                renderApp();
+                closePresetsModal();
+                showToast(`Loaded "${preset.name}"`, 'fa-bookmark', 'text-slate-900');
+            }
+        }
+
+        function deletePreset(id) {
+            appData.presets = appData.presets.filter(p => p.id !== id);
+            saveToLocalStorage();
+            renderPresetsList();
+            showToast('Preset deleted', 'fa-trash', 'text-slate-700');
+        }
+
+        // Review Modal
+        function openReviewModal() {
+            const completedCount = appData.activities.filter(a => a.completed).length;
+            const totalCount = appData.activities.length;
+
+            document.getElementById('review-completed-count').textContent = `${completedCount} / ${totalCount}`;
+            document.getElementById('review-penalty-time').textContent = `${appData.penaltyMinutes}m`;
+
+            const msgBox = document.getElementById('review-message-box');
+            if (appData.penaltyMinutes === 0 && completedCount === totalCount && totalCount > 0) {
+                msgBox.textContent = "🏆 Incredible session! You completed all your planned activities with zero distractions. You nailed your free time window!";
+            } else if (appData.penaltyMinutes > 60) {
+                msgBox.textContent = `⚠️ You logged ${appData.penaltyMinutes}m of distractions today. Try setting your phone aside earlier tomorrow to reclaim your evening flow.`;
+            } else {
+                msgBox.textContent = `✨ Solid effort! You completed ${completedCount} out of ${totalCount} activities. Keep tweaking your window to build a seamless routine when coming home.`;
+            }
+
+            const modal = document.getElementById('review-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeReviewModal() {
+            const modal = document.getElementById('review-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function resetAllData() {
+            if (confirm("Reset current session data?")) {
+                appData.penaltyMinutes = 0;
+                appData.activities.forEach(a => a.completed = false);
+                saveToLocalStorage();
+                renderApp();
+                showToast('Session reset', 'fa-rotate-right', 'text-slate-700');
+            }
+        }
+
+        // Initialize on Load
+        window.onload = function() {
+            initApp();
+        };
+    </script>
+</body>
+</html>
